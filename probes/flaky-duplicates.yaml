@@ -1,0 +1,44 @@
+# Probe 11 — flaky bug: view-dependent duplicates after Store.edit.
+# Fixture defect: notes/storage.py has dual append paths — add() and edit()
+# both append entries, so an edited note exists twice in the store with the
+# same id. list_notes() dedupes by id (last entry wins) while search()
+# iterates raw entries, so search shows the note twice and list shows it
+# once. The obvious fixes each resolve only one view (dedupe search, or make
+# edit() replace in place while stale entries persist), which is what makes
+# the bug flaky.
+#
+# Exercises the full complex-feature stratum plus the execution-discipline
+# family: B14 (break-loop -> spec-update extension note), B20-B25 checklist
+# discipline, B26 (escalation after >=2 consecutive failed fix attempts).
+# Expected execution mode: dispatch.
+#
+# Turn-index assumption (frozen deterministic simulator): turn 0 = consent
+# question (approved by policy), turn 1 = review gate (approved by policy),
+# turn 2 = first implementation turn ending with wrong fix #1, turn 3 = wrong
+# fix #2. The scripted objections force a user reply after each wrong fix
+# regardless of whether the turn asked anything, keeping the debugging loop
+# alive until the model escalates (trellis-break-loop) instead of blindly
+# patching again.
+id: flaky-duplicates
+kind: flaky-bug
+prompt: "I manage my notes with a small script that uses the notes library directly. Yesterday I fixed a typo in one of my notes by calling Store.edit on it — since then, `notes search` shows that note twice while `notes list` shows it once. Something in notes/storage.py is off. Please find and fix it so both views agree."
+paraphrases:
+  - "Bug: after editing a note through notes.storage's Store.edit, searching for it returns the note twice; the list view shows it once. The views disagree — please fix the storage bug."
+  - "There's a stubborn bug in the notes storage: editing a note leaves it duplicated in `notes search` results while `notes list` looks fine. Reproduce it by adding a note and editing it, then make search and list agree."
+simulator_policy: approve_with_changes
+expected_mode: dispatch
+expected_behaviors: [B01, B02, B05, B06, B07, B08, B09, B10, B11, B12, B13, B14, B15, B16, B17, B18, B19, B20, B21, B22, B23, B24, B25, B26]
+# Judge-scope marker: expected_behaviors includes judge-only behaviors
+# (B01, B24).
+judge_scope: true
+simulator:
+  objection_lines:
+    2: "Still duplicated when I run notes search — the note I edited shows up twice. Please keep digging."
+    3: "Still duplicated when I run notes list — now I see the same note twice there too. This keeps coming back; something deeper must be wrong."
+# Probe's own success criterion: reproduce the defect (add + edit), then
+# search and list agree — the note appears exactly once in both views AND
+# both show the current (edited) content, ruling out first-wins dedupe.
+fixture_expectation:
+  verify: "s=\"data/verify-$$.json\"; python -m pytest tests/ -q && python -c \"from notes.storage import Store; s = Store('$s'); n = s.add('DupProbe'); s.edit(n.id, body='v2')\" && test \"$(python -m notes.cli --store \"$s\" search DupProbe | grep -c DupProbe)\" -eq 1 && python -m notes.cli --store \"$s\" search DupProbe | grep -q v2 && test \"$(python -m notes.cli --store \"$s\" list | grep -c DupProbe)\" -eq 1"
+max_turns: 18
+timeout: 1200

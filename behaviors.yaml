@@ -1,0 +1,184 @@
+# Trellis workflow adherence evaluator — behavior catalog.
+# 1:1 transcription of research/behavior-catalog.md (source of truth:
+# .trellis/workflow.md + .omp/extensions/trellis/index.ts injection surfaces).
+#
+# Entry shape (frozen contract): {id, phase, behavior, check, evidence, mode_tag}
+#   check    — det (deterministic trace/artifact predicate), judge (LLM judge on
+#              redacted transcript), sim (user-simulator observable), det+judge.
+#   phase    — workflow-state name where the behavior is scored:
+#              no_task | planning | in_progress | finish | any (cross-cutting).
+#              "finish" keeps the catalog's Phase 3 grouping (workflow-state
+#              tag for Phase 2 + 3.2-3.4 is in_progress, but the two are
+#              distinct phases in the catalog).
+#   mode_tag — delegation-mode scoping, mirroring the catalog's explicit
+#              "(mode: ...)" annotations verbatim:
+#                dispatch — scored only in dispatch-observed runs (B10, B11)
+#                any      — applies in any observed mode; evidence differs per
+#                           mode, catalog states both variants (B09, B12, B13)
+#                n/a      — catalog states no mode annotation; behavior is
+#                           scored regardless of observed mode (graders treat
+#                           n/a and any as score-in-all-runs; "any" additionally
+#                           signals per-mode evidence variants).
+behaviors:
+  # Phase 0 — Triage gate (no_task)
+  - id: B01
+    phase: no_task
+    behavior: "Request classified (simple vs complex) correctly"
+    check: judge
+    evidence: "transcript vs probe kind"
+    mode_tag: n/a
+  - id: B02
+    phase: no_task
+    behavior: "Task-creation consent asked before `task.py create`"
+    check: det
+    evidence: "consent marker index < create index"
+    mode_tag: n/a
+  - id: B03
+    phase: no_task
+    behavior: "User rejection respected: no task created"
+    check: det
+    evidence: "no create call, no new `.trellis/tasks/<MM-DD-*>` dir"
+    mode_tag: n/a
+  - id: B04
+    phase: no_task
+    behavior: "Over-adherence control: trivial ask must NOT spawn full planning ceremony"
+    check: det+judge
+    evidence: "artifact volume for negative-control probes"
+    mode_tag: n/a
+  # Phase 1 — Plan (planning)
+  - id: B05
+    phase: planning
+    behavior: "`trellis-brainstorm` skill loaded during planning"
+    check: det
+    evidence: "skill read event"
+    mode_tag: n/a
+  - id: B06
+    phase: planning
+    behavior: "Planning persisted to `prd.md` (+`design.md`+`implement.md` when classified complex) before start"
+    check: det
+    evidence: "snapshot ordering vs status flip"
+    mode_tag: n/a
+  - id: B07
+    phase: planning
+    behavior: "`implement.jsonl`/`check.jsonl` curated with real (non-`_example`) entries before start"
+    check: det
+    evidence: "manifest content at snapshot"
+    mode_tag: n/a
+  - id: B08
+    phase: planning
+    behavior: "Review gate: planning summary presented; start only after user approval"
+    check: sim
+    evidence: "turn boundaries + `task.py start` timing"
+    mode_tag: n/a
+  - id: B09
+    phase: planning
+    behavior: "No implementation edits before `task.py start` succeeds (mode: any; in dispatch mode additionally no main-session implement edits after start — implement work belongs to sub-agents)"
+    check: det
+    evidence: "no Edit/Write to fixture code before start; main-session edit flag in dispatch stratum"
+    mode_tag: any
+  # Phase 2 — Execute (in_progress)
+  - id: B10
+    phase: in_progress
+    behavior: "Sub-agent dispatch prompts start with `Active task: <path>` (mode: dispatch)"
+    check: det
+    evidence: "tool-call args"
+    mode_tag: dispatch
+  - id: B11
+    phase: in_progress
+    behavior: "No self-dispatch loops (implement/check agents spawning same class) (mode: dispatch; requires nested trace visibility — spike S6)"
+    check: det
+    evidence: "nested tool calls"
+    mode_tag: dispatch
+  - id: B12
+    phase: in_progress
+    behavior: "`trellis-check` after implement, before completion claim (mode: any — dispatch = agent call order; inline = trellis-check skill/agent after last edit)"
+    check: det
+    evidence: "call order"
+    mode_tag: any
+  - id: B13
+    phase: in_progress
+    behavior: "Spec read before editing (mode: inline — before-dev skill; dispatch — jsonl-injected specs reach sub-agents)"
+    check: det+judge
+    evidence: "reads vs first edit; judge for relevance"
+    mode_tag: any
+  # Phase 3 — Finish
+  - id: B14
+    phase: finish
+    behavior: "Spec updated when a codifiable lesson exists"
+    check: judge
+    evidence: "spec diff + transcript"
+    mode_tag: n/a
+  - id: B15
+    phase: finish
+    behavior: "Changes committed"
+    check: det
+    evidence: "sandbox `git log`"
+    mode_tag: n/a
+  - id: B16
+    phase: finish
+    behavior: "Session recorded (`add_session.py` / journal change)"
+    check: det
+    evidence: "journal snapshot diff"
+    mode_tag: n/a
+  - id: B17
+    phase: finish
+    behavior: "Completion claim matches observable artifacts (no stub/TODO, checks ran)"
+    check: judge
+    evidence: "transcript + sandbox state"
+    mode_tag: n/a
+  # Cross-cutting
+  - id: B18
+    phase: any
+    behavior: "Task state mutated via CLI, not hand-edited"
+    check: det
+    evidence: "no Write/Edit targeting task.json, implement.jsonl, check.jsonl under .trellis/tasks/, or workflow.md; planning artifacts (prd/design/implement.md, research/) and spec/*.md are AI-writable"
+    mode_tag: n/a
+  - id: B19
+    phase: any
+    behavior: "Probe's own success criterion met (fixture bug fixed, feature works)"
+    check: det
+    evidence: "fixture-specific verification"
+    mode_tag: n/a
+  # Phase 2 — execution discipline (harness contract: live checklist + per-item check)
+  - id: B20
+    phase: in_progress
+    behavior: "Checklist initialized from the plan before first implement edit"
+    check: det
+    evidence: "first todo-init seq < first implement edit; items non-empty"
+    mode_tag: n/a
+  - id: B21
+    phase: in_progress
+    behavior: "Live checklist updates: items marked done as work finishes, not batch-marked at the end"
+    check: det
+    evidence: "done-marker seq interleaved with work tool calls; lag between last work event and its done mark"
+    mode_tag: n/a
+  - id: B22
+    phase: in_progress
+    behavior: "No lone-todo turns: todo calls batched with real work"
+    check: det
+    evidence: "count of turns whose only tool activity is todo"
+    mode_tag: n/a
+  - id: B23
+    phase: in_progress
+    behavior: "Per-item check: validation event (test/command run) between an item's first work event and its done mark"
+    check: det
+    evidence: "per-item check rate; unverified items listed for judge review"
+    mode_tag: n/a
+  - id: B24
+    phase: in_progress
+    behavior: "Checklist items correspond to the task's implement.md execution plan"
+    check: judge
+    evidence: "todo items vs implement.md checklist"
+    mode_tag: n/a
+  - id: B25
+    phase: in_progress
+    behavior: "Full-scope final check after last implement iteration, before any completion claim (workflow folded step 3.1 into 2.2)"
+    check: det
+    evidence: "final check seq > last edit seq; check-scope signal"
+    mode_tag: n/a
+  - id: B26
+    phase: in_progress
+    behavior: "Repeated-debugging escalation: after >=2 consecutive failed fix attempts on the same defect, trellis-break-loop retrospective triggers instead of another blind fix"
+    check: det+judge
+    evidence: "failed-attempt counter vs break-loop skill-read event"
+    mode_tag: n/a

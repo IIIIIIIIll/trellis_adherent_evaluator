@@ -1,0 +1,5 @@
+# omp --config overlay for the no-spec-injection arm (design.md "Harness
+# arms"): isolates path-scoped spec injection by disabling it while every
+# other knob stays at the trellis-on baseline.
+spec_injection:
+  enabled: false

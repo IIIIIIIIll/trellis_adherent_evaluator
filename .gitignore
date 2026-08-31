@@ -1,0 +1,6 @@
+# Evaluator run artifacts (design.md Operational: runs/ is gitignored)
+runs/
+
+# Python noise
+__pycache__/
+*.pyc

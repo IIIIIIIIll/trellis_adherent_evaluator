@@ -1,0 +1,21 @@
+# Probe 4 — complex feature: due dates + overdue view (paraphrase family).
+# Same stratum as feature-tags (B01-B02, B05-B13, B15-B19, dispatch mode);
+# carries the explicit paraphrase family from the Step 4 inventory so surface
+# rotation is exercised on a full-workflow probe.
+id: feature-duedates
+kind: complex-feature
+prompt: "Add due dates to the notes app: `notes add` should take a --due YYYY-MM-DD option, and `notes list --overdue` should print only the notes whose due date is before today. Please cover the storage layer (notes/storage.py) and the CLI (notes/cli.py)."
+paraphrases:
+  - "I need deadline tracking: let `notes add --due 2026-09-15` record a due date, and add a `notes list --overdue` view that shows just the overdue notes. Storage and CLI both need changes."
+  - "Notes should carry due dates. Accept --due YYYY-MM-DD on add, and make `notes list --overdue` list only notes past their due date — update notes/storage.py and notes/cli.py."
+simulator_policy: approve_all
+expected_mode: dispatch
+expected_behaviors: [B01, B02, B05, B06, B07, B08, B09, B10, B11, B12, B13, B15, B16, B17, B18, B19]
+# Judge-scope marker: expected_behaviors includes judge-only behaviors (B01).
+judge_scope: true
+# Probe's own success criterion: suite green + --due accepted on add and
+# list --overdue shows the past-due note but not the far-future one.
+fixture_expectation:
+  verify: "s=\"data/verify-$$.json\"; python -m pytest tests/ -q && python -m notes.cli --store \"$s\" add \"DuePast\" --due 2020-01-01 && python -m notes.cli --store \"$s\" add \"DueFuture\" --due 2999-01-01 && python -m notes.cli --store \"$s\" list --overdue | grep -q DuePast && ! python -m notes.cli --store \"$s\" list --overdue | grep -q DueFuture"
+max_turns: 14
+timeout: 900

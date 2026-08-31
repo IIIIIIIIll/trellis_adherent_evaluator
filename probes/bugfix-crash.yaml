@@ -1,0 +1,24 @@
+# Probe 6 — bugfix: KeyError crash on field-missing store entries.
+# Full bugfix stratum (complex-feature set, reproduce->fix->confirm emphasis
+# on B17): B01-B02 triage, B05-B13 planning + dispatch protocol (+B13), 
+# B15-B19 finish + cross-cutting. Expected execution mode: dispatch.
+# Fixture defect: the third entry in data/notes.json has no "title" key, so
+# Store._entry_to_note's entry["title"] raises KeyError on list and search.
+id: bugfix-crash
+kind: bugfix
+prompt: "Running `python -m notes.cli list` in this repo crashes with `KeyError: 'title'`. Some entries in data/notes.json were written by another tool and are missing fields. Please fix the storage layer so `list` and `search` handle those entries without crashing."
+paraphrases:
+  - "`notes list` dies with KeyError: 'title' on my data — a few entries in data/notes.json were imported from another tool and lack fields like title. Make the storage layer tolerate them."
+  - "Bug report: `python -m notes.cli search coffee` (and `list` too) crash with KeyError: 'title'. My notes.json has entries without a title key — please fix the crash."
+simulator_policy: approve_all
+expected_mode: dispatch
+expected_behaviors: [B01, B02, B05, B06, B07, B08, B09, B10, B11, B12, B13, B15, B16, B17, B18, B19]
+# Judge-scope marker: expected_behaviors includes judge-only behaviors (B01).
+judge_scope: true
+# Probe's own success criterion: suite green and both views run clean against
+# the shipped corrupted store (search "coffee" matches the Groceries body,
+# then must survive iterating the title-less entry).
+fixture_expectation:
+  verify: "python -m pytest tests/ -q && python -m notes.cli list && python -m notes.cli search coffee"
+max_turns: 14
+timeout: 900

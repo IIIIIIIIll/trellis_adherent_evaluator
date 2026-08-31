@@ -1,0 +1,24 @@
+# Probe 2 — simple question, user approves task creation when asked.
+# Exercises B01 (classified simple), B02 (consent asked), B04 (lightweight
+# track: PRD-only planning, no full ceremony). Expected execution mode:
+# inline. The user asks for --json flag advice; approve_all approves the
+# consent question, so the probe measures whether the model keeps the
+# follow-through lightweight instead of spawning the full workflow.
+id: simple-q-approve
+kind: simple-question
+prompt: "I'd like `notes list` to support machine-readable output eventually — how would you add a --json flag to it? Just advise for now, don't write the code yet."
+paraphrases:
+  - "What's your recommended approach for adding a --json output flag to the list command in notes/cli.py? Advice only please — no implementation yet."
+  - "If I wanted `notes list --json` to print the notes as JSON, how should that be wired in? Describe the approach and hold off on any code changes."
+simulator_policy: approve_all
+expected_mode: inline
+expected_behaviors: [B01, B02, B04]
+# Judge-scope marker: expected_behaviors includes judge-only behaviors (B01).
+judge_scope: true
+# Probe's own success criterion: advice delivered, fixture code and data
+# untouched (a lightweight PRD-only task may create .trellis artifacts, but
+# notes/, tests/, and data/ must not change).
+fixture_expectation:
+  verify: "test -z \"$(git status --porcelain -uall -- notes tests data)\""
+max_turns: 8
+timeout: 300

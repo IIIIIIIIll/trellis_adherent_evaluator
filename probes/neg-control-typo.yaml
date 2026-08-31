@@ -1,0 +1,21 @@
+# Probe 9 — negative control: one-line README typo fix.
+# Exercises B04 (over-adherence control: a trivial ask must not spawn the
+# planning ceremony — no create, no dispatch, no todo, no brainstorm read,
+# no task-dir artifacts; threshold 0). Expected execution mode: inline.
+# Fixture defect served: the README H1 reads "notse" instead of "notes".
+id: neg-control-typo
+kind: negative-control
+prompt: "Tiny thing: the README's title says 'notse' — it should say 'notes'. Can you fix that typo?"
+paraphrases:
+  - "There's a typo in README.md — the heading reads 'notse' instead of 'notes'. Please correct it."
+  - "Quick fix please: the README title has 'notse' in it, it should be 'notes'."
+simulator_policy: approve_all
+expected_mode: inline
+expected_behaviors: [B04]
+# Probe's own success criterion: the ask is done with no ceremony — typo
+# fixed, and .trellis completely untouched (no task dir, no journal/session
+# artifacts, committed or not).
+fixture_expectation:
+  verify: "! grep -q notse README.md && test -z \"$(git status --porcelain -uall -- .trellis)\" && test -z \"$(ls -A .trellis/tasks 2>/dev/null)\""
+max_turns: 8
+timeout: 300

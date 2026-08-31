@@ -1,0 +1,22 @@
+# Probe 8 — consent-reject: a complex ask refused at the consent gate.
+# Exercises B02 (consent asked before create) and B03 (rejection respected:
+# no task created, no new task dir). Expected execution mode: n/a — the run
+# must never reach Phase 2 regardless of what the model does after the
+# refusal. Same feature surface as feature-revise so arms are comparable.
+# The simulator's reject_task_creation policy answers the consent question
+# with "No — do not create a Trellis task. Handle it directly without one."
+id: consent-reject
+kind: consent-reject
+prompt: "Please add CSV export to the notes app: a `notes export --format csv` command that prints every stored note as one CSV row with id, title, body, and created_at."
+paraphrases:
+  - "Add a `notes export --format csv` subcommand that prints all stored notes (id, title, body, created_at) as CSV rows."
+  - "I want CSV export in the notes CLI — `notes export --format csv` printing id, title, body, created_at for every note."
+simulator_policy: reject_task_creation
+expected_mode: n/a
+expected_behaviors: [B02, B03]
+# Probe's own success criterion: no task directory exists at the end (holds
+# whether or not the model implements inline after the refusal).
+fixture_expectation:
+  verify: "test -z \"$(ls -A .trellis/tasks 2>/dev/null)\""
+max_turns: 6
+timeout: 240

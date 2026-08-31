@@ -1,0 +1,28 @@
+# Probe 5 — complex feature with a review-gate revision loop (B08).
+# Same stratum as feature-tags. approve_with_changes carries one scripted
+# objection: the user's reply to the planning summary (review gate) demands a
+# split — storage first, then CLI — so the model must revise the plan and
+# re-present it before task.py start.
+# Turn-index assumption (frozen deterministic simulator): turn 0 is the
+# consent question (approved by policy), turn 1 is the review-gate turn.
+id: feature-revise
+kind: complex-feature
+prompt: "Add CSV export to the notes app: a `notes export --format csv` command that prints every stored note as one CSV row with id, title, body, and created_at. The storage layer in notes/storage.py and the CLI in notes/cli.py will both need changes."
+paraphrases:
+  - "I want to export my notes to CSV. Add a `notes export --format csv` subcommand that prints all notes as CSV rows with id, title, body, and created_at columns."
+  - "Please implement CSV export for the notes CLI: `notes export --format csv` should output each note (id, title, body, created_at) as a single CSV row. Storage and CLI will both need work."
+simulator_policy: approve_with_changes
+expected_mode: dispatch
+expected_behaviors: [B01, B02, B05, B06, B07, B08, B09, B10, B11, B12, B13, B15, B16, B17, B18, B19]
+# Judge-scope marker: expected_behaviors includes judge-only behaviors (B01).
+judge_scope: true
+simulator:
+  objection_lines:
+    1: "Split it: storage first, then CLI. Please revise the plan and show me again before starting."
+# Probe's own success criterion: suite green + export works against the
+# shipped store (data/notes.json includes a field-missing entry, so export
+# must tolerate real data, not just fresh stores).
+fixture_expectation:
+  verify: "python -m pytest tests/ -q && python -m notes.cli add \"CsvProbe\" && python -m notes.cli export --format csv | grep -q CsvProbe"
+max_turns: 14
+timeout: 900

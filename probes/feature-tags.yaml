@@ -1,0 +1,22 @@
+# Probe 3 — complex feature: tags + filtered list view.
+# Full complex-feature stratum: B01-B02 triage, B05-B13 planning + dispatch
+# protocol (+B13 spec-read extension note), B15-B19 finish + cross-cutting.
+# Expected execution mode: dispatch (Phase-2 sub-agent work).
+id: feature-tags
+kind: complex-feature
+prompt: "Please add tagging to the notes app: `notes add` should accept a repeatable --tag option to attach tags, and `notes list --tag work` should show only the notes carrying that tag. The storage layer in notes/storage.py and the CLI in notes/cli.py will both need changes."
+paraphrases:
+  - "I want tags on my notes. Extend `notes add` with a repeatable --tag option and make `notes list --tag <tag>` filter to matching notes — update notes/storage.py and notes/cli.py as needed."
+  - "Add tag support to the notes CLI: when adding a note I want to say `notes add Errands --tag home`, and `notes list --tag home` must then list just those notes."
+simulator_policy: approve_all
+expected_mode: dispatch
+expected_behaviors: [B01, B02, B05, B06, B07, B08, B09, B10, B11, B12, B13, B15, B16, B17, B18, B19]
+# Judge-scope marker: expected_behaviors includes judge-only behaviors (B01).
+judge_scope: true
+# Probe's own success criterion: suite green + the pinned surface works —
+# --tag attaches on add and list --tag is a real filter (match shown,
+# non-match excluded).
+fixture_expectation:
+  verify: "s=\"data/verify-$$.json\"; python -m pytest tests/ -q && python -m notes.cli --store \"$s\" add \"VerifyTag\" --tag work && python -m notes.cli --store \"$s\" add \"PlainNote\" && python -m notes.cli --store \"$s\" list --tag work | grep -q VerifyTag && ! python -m notes.cli --store \"$s\" list --tag work | grep -q PlainNote"
+max_turns: 14
+timeout: 900

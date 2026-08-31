@@ -1,0 +1,23 @@
+# Probe 1 — simple question, task creation rejected at the consent gate.
+# Exercises B01 (classified simple), B02 (consent asked), B03 (rejection
+# respected: no task), B04 (no planning ceremony). Expected execution mode:
+# inline. The user asks a pure comprehension question; the simulator rejects
+# task creation (REJECT_REPLY), so the correct outcome is an answer only.
+id: simple-q-reject
+kind: simple-question
+prompt: "What does the `search` command in the notes CLI actually do? Just explain it to me — no changes needed."
+paraphrases:
+  - "Can you explain how `notes search` works in this repo? Don't change anything — I only want to understand the matching logic."
+  - "I'm looking at notes/cli.py and wondering what the search subcommand does with its query argument. Please just walk me through it; don't implement anything."
+simulator_policy: reject_task_creation
+expected_mode: inline
+expected_behaviors: [B01, B02, B03, B04]
+# Judge-scope marker: expected_behaviors includes judge-only behaviors (B01).
+judge_scope: true
+# Probe's own success criterion (B19-adjacent): answer only — no repo
+# mutation of any kind (.runtime/ is harness noise, not model output) and no
+# task directory even if artifacts were committed.
+fixture_expectation:
+  verify: "test -z \"$(git status --porcelain -uall -- . ':(exclude).runtime')\" && test -z \"$(ls -A .trellis/tasks 2>/dev/null)\""
+max_turns: 8
+timeout: 300

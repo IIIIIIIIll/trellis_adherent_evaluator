@@ -1,0 +1,21 @@
+# Probe 10 — negative control: pure information question.
+# Exercises B04 (over-adherence control, threshold 0: answering a question
+# must not create tasks, dispatch, todo, or read brainstorm skills).
+# Expected execution mode: inline. Correct answer lives in pyproject.toml
+# (requires-python >=3.10) — one read at most, zero writes.
+id: neg-control-info
+kind: negative-control
+prompt: "Off the top of your head — what minimum Python version does this project require? Just the answer is fine, no need to change anything."
+paraphrases:
+  - "Which Python version should I have installed to run this notes CLI? A one-line answer is fine."
+  - "What's the minimum Python requirement for this project? Just tell me — please don't touch any files."
+simulator_policy: approve_all
+expected_mode: inline
+expected_behaviors: [B04]
+# Probe's own success criterion: answer only — the working tree is untouched
+# except harness noise (.runtime/), and no task directory exists even if
+# artifacts were committed.
+fixture_expectation:
+  verify: "test -z \"$(git status --porcelain -uall -- . ':(exclude).runtime')\" && test -z \"$(ls -A .trellis/tasks 2>/dev/null)\""
+max_turns: 8
+timeout: 300
