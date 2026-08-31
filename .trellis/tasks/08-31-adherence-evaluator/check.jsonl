@@ -1,0 +1,3 @@
+{"file": ".trellis/tasks/08-31-adherence-evaluator/research/behavior-catalog.md", "reason": "authoritative behavior list — check that grader predicates and probe coverage match it exactly (13 det, 19 total)"}
+{"file": ".trellis/tasks/08-31-adherence-evaluator/research/omp-driver-notes.md", "reason": "verify driver implementation matches frozen spike outcomes and planned invocation shape; flag any deviation"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "verify events.jsonl schema usage is consistent across trace.py, grader.py, judge.py, report.py"}

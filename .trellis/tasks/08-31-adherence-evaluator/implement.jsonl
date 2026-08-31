@@ -1,0 +1,4 @@
+{"file": ".trellis/tasks/08-31-adherence-evaluator/research/omp-driver-notes.md", "reason": "omp CLI flags, planned invocation shape, blocking spikes S1-S5, user-simulator detection rule — driver.py and sandbox.py implement against this"}
+{"file": ".trellis/tasks/08-31-adherence-evaluator/research/behavior-catalog.md", "reason": "19 behavior definitions with check classes and evidence sources — behaviors.yaml, grader predicates, and probe coverage derive from this"}
+{"file": ".trellis/spec/guides/code-reuse-thinking-guide.md", "reason": "greenfield tool: reuse .trellis/scripts patterns (argparse CLIs, path handling) instead of inventing parallel conventions"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "driver/trace/grader/report layer boundaries and the events.jsonl contract must stay consistent end-to-end"}
