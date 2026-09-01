@@ -73,11 +73,35 @@ _PLAN_CLIP = 2000
 
 
 def _resolve_probe_paths(spec: str) -> list[str]:
-    """``all`` -> default probes dir; otherwise a glob or a file/dir path."""
+    """``all`` -> default probes dir; a bare probe id or probe kind (e.g.
+    ``simple-question``) -> matching YAMLs in the default probes dir;
+    otherwise a glob or a file/dir path."""
     if spec == "all":
         return [str(DEFAULT_PROBES_DIR)]
+    if not _glob.has_magic(spec) and "/" not in spec:
+        candidate = DEFAULT_PROBES_DIR / f"{spec}.yaml"
+        if candidate.exists():
+            return [str(candidate)]
     expanded = sorted(_glob.glob(spec))
-    return expanded or [spec]
+    if expanded:
+        return expanded
+    if not _glob.has_magic(spec) and "/" not in spec:
+        matches = [
+            str(p)
+            for p in sorted(DEFAULT_PROBES_DIR.glob("*.yaml"))
+            if (raw := _safe_yaml(p)) and raw.get("kind") == spec
+        ]
+        if matches:
+            return matches
+    return [spec]
+
+
+def _safe_yaml(path: Path) -> Mapping | None:
+    try:
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError):
+        return None
+    return raw if isinstance(raw, Mapping) else None
 
 
 def _load_objection_lines(paths: list[str]) -> dict[str, dict[int, str]]:
@@ -477,10 +501,9 @@ def cmd_grade(args) -> int:
     return 0
 
 
-def cmd_report(args) -> int:
-    run_dir = Path(args.run_dir)
+def _load_run_rows(run_dir: Path) -> tuple[dict, list[report.ProbeRun]]:
+    """run.json + per-probe verdicts.json -> (meta, ProbeRun rows)."""
     meta = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
-    catalog = catalog_mod.load_catalog()
     rows: list[report.ProbeRun] = []
     for entry in meta.get("probes") or []:
         probe_dir = run_dir / entry["dir"]
@@ -522,6 +545,22 @@ def cmd_report(args) -> int:
                 checklist=data.get("checklist"),
             )
         )
+    return meta, rows
+
+
+def cmd_report(args) -> int:
+    run_dir = Path(args.run_dir)
+    catalog = catalog_mod.load_catalog()
+    meta, rows = _load_run_rows(run_dir)
+    comparisons: list[tuple[str, list[report.ProbeRun]]] = [
+        (meta.get("arm", "") or run_dir.name, rows)
+    ]
+    for spec in (args.compare or "").split(","):
+        if not spec.strip():
+            continue
+        cmp_dir = Path(spec.strip())
+        cmp_meta, cmp_rows = _load_run_rows(cmp_dir)
+        comparisons.append((cmp_meta.get("arm", "") or cmp_dir.name, cmp_rows))
     md = report.render_report(
         rows,
         run_name=meta.get("run_name", run_dir.name),
@@ -530,6 +569,7 @@ def cmd_report(args) -> int:
         date=meta.get("date", ""),
         run_dir=str(run_dir),
         behavior_text={b.id: b.behavior for b in catalog.behaviors},
+        comparisons=comparisons,
     )
     (run_dir / "report.md").write_text(md, encoding="utf-8")
     print(f"report written: {run_dir / 'report.md'}")
@@ -564,8 +604,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_eval.add_argument(
         "--probes", default="all",
-        help='probe selection: "all" (probes/ dir), a glob pattern, or a path '
-        "to a probe YAML file or directory",
+        help='probe selection: "all" (probes/ dir), a probe id, a probe kind '
+        '(e.g. "simple-question"), a glob pattern, or a path to a probe '
+        "YAML file or directory",
     )
     p_eval.add_argument(
         "--jobs", type=int, default=2,
@@ -630,6 +671,12 @@ def build_parser() -> argparse.ArgumentParser:
     p_rep.add_argument(
         "--run-dir", required=True,
         help="run directory containing run.json and <probe>/verdicts.json",
+    )
+    p_rep.add_argument(
+        "--compare",
+        default=None,
+        help="comma-separated sibling run dirs; appends a cross-arm "
+        "per-behavior delta section to the rendered report",
     )
     p_rep.set_defaults(func=cmd_report)
     return parser

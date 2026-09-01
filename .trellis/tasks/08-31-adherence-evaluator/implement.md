@@ -6,27 +6,27 @@ session format) are front-loaded as spikes.
 
 ## Step 0 — Spikes (blocks everything)
 
-- [ ] S1: interactivity under `omp -p` — consent question observability,
+- [x] S1: interactivity under `omp -p` — consent question observability,
       `--continue` reply loop; if broken, re-evaluate `--mode=rpc` (design
       trade-off note updated on outcome).
-- [ ] S2: session file format under `--session-dir` (messages, tool calls,
+- [x] S2: session file format under `--session-dir` (messages, tool calls,
       injected context present?).
-- [ ] S3: `<workflow-state>` breadcrumbs recorded in session file? (else:
+- [x] S3: `<workflow-state>` breadcrumbs recorded in session file? (else:
       driver-side reconstruction).
-- [ ] S4: extension discovery in a fixture sandbox; `--no-extensions` really
+- [x] S4: extension discovery in a fixture sandbox; `--no-extensions` really
       silent.
-- [ ] S5: time one trivial probe session end-to-end.
-- [ ] S6: verify nested sub-agent tool-call capture in session files
+- [x] S5: time one trivial probe session end-to-end.
+- [x] S6: verify nested sub-agent tool-call capture in session files
        (predicate B11); on negative result B11 downgrades to judge-scope.
 - Validation: spike notes appended to `research/omp-driver-notes.md` with
   concrete commands + observed output; driver flag set frozen in design.md.
 
 ## Step 1 — Schemas + catalogs
 
-- [ ] `behaviors.yaml` from `research/behavior-catalog.md` (id, phase, check
+- [x] `behaviors.yaml` from `research/behavior-catalog.md` (id, phase, check
       class, predicate name or judge rubric, evidence type).
-- [ ] Probe YAML loader (`probes.py`) with paraphrase rotation.
-- [ ] Fixture template: `fixtures/repo-template/` — `notes-cli` Python
+- [x] Probe YAML loader (`probes.py`) with paraphrase rotation.
+- [x] Fixture template: `fixtures/repo-template/` — `notes-cli` Python
       project (models/storage/cli + passing pytest suite), planted defects
       serving specific probes: corrupted data entry (KeyError bugfix probe),
       naive UTC timestamps (tz bugfix probe), dual append paths in storage
@@ -38,36 +38,36 @@ session format) are front-loaded as spikes.
 
 ## Step 2 — Driver + simulator + snapshots
 
-- [ ] `driver.py`: frozen flag set from Step 0; turn loop; session dir per
+- [x] `driver.py`: frozen flag set from Step 0; turn loop; session dir per
       run; `--max-time` enforcement; wall/token cost capture.
-- [ ] `simulator.py`: 4 policy state machines keyed off assistant turn
+- [x] `simulator.py`: 4 policy state machines keyed off assistant turn
       content (question detection rule in research notes).
-- [ ] `snapshot.py`: per-turn path->hash snapshot of `.trellis/**` + fixture
+- [x] `snapshot.py`: per-turn path->hash snapshot of `.trellis/**` + fixture
       code + `git log`.
-- [ ] `trace.py`: session JSONL → `events.jsonl` normalizer.
+- [x] `trace.py`: session JSONL → `events.jsonl` normalizer.
 - Validation: run one `simple-question` probe end-to-end; inspect
   `events.jsonl` manually — every turn/tool call/snapshot present, seq
   monotonic.
 
 ## Step 3 — Deterministic grader
 
-- [ ] `grader.py`: predicates for all `det` behaviors (B02-B12, B15, B16,
+- [x] `grader.py`: predicates for all `det` behaviors (B02-B12, B15, B16,
       B18, B19; B03/B04 partially det).
-- [ ] Execution-discipline predicates: checklist family B20-B23 + B25
+- [x] Execution-discipline predicates: checklist family B20-B23 + B25
       (todo event model: init/update/done marks; per-item verification
       pairing; lone-todo turn counter; final full-scope check ordering).
-- [ ] Failed-fix-attempt counter + escalation detector (B26 det part).
-- [ ] Delegation-mode detector: observed mode per run (Phase-2 task-tool
+- [x] Failed-fix-attempt counter + escalation detector (B26 det part).
+- [x] Delegation-mode detector: observed mode per run (Phase-2 task-tool
       call => dispatch, else inline) + `expected_mode` comparison per probe
       kind => `mode_agreement` verdicts.
-- [ ] Golden-trace unit tests: 2 hand-built synthetic event streams per
+- [x] Golden-trace unit tests: 2 hand-built synthetic event streams per
       tricky predicate (ordering edge cases: create-before-ask, edit-during-
       planning).
 - Validation: `python -m pytest tests/test_grader.py -q`.
 
 ## Step 4 — Probe suite v1
 
-- [ ] 11 probes (concrete inventory; prompts finalized in probe YAML):
+- [x] 11 probes (concrete inventory; prompts finalized in probe YAML):
       1 simple-q-reject ("what does search do", reject at gate),
       2 simple-q-approve ("--json flag advice", approves task, lightweight
         track PRD-only),
@@ -89,27 +89,37 @@ session format) are front-loaded as spikes.
 
 ## Step 5 — Judge
 
-- [ ] `judge.py`: redaction (arm, model, timestamps) → rubric prompt →
+- [x] `judge.py`: redaction (arm, model, timestamps) → rubric prompt →
       verdict JSON; retry-once on malformed output.
-- [ ] Judge agreement check: hand-label 10-trace sample, record agreement in
+- [x] Judge agreement check: hand-label 10-trace sample, record agreement in
       `runs/judge-validation.md`.
 - Validation: `python -m evaluator.cli grade --trace <golden> --judge` emits
   parseable verdicts for all judge behaviors.
 
 ## Step 6 — Report + CLI
 
-- [ ] `report.py` + `cli.py evaluate --arm ... --probes ... --jobs N`.
-- [ ] Report carries `mode_agreement` per probe and aggregate per arm.
+- [x] `report.py` + `cli.py evaluate --arm ... --probes ... --jobs N`.
+- [x] Report carries `mode_agreement` per probe and aggregate per arm.
 - Validation: `python -m evaluator.cli evaluate --arm trellis-on --probes simple-question`
   produces `report.md` with matrix, rates, costs, violations.
 
 ## Step 7 — Full run + acceptance
 
-- [ ] All probes × 3 arms (`trellis-on`, `trellis-off`, `no-spec-injection`).
-- [ ] Acceptance checks from prd.md verified; report deltas sanity-checked
+- [x] All probes × 3 arms (`trellis-on`, `trellis-off`, `no-spec-injection`).
+- [x] Acceptance checks from prd.md verified; report deltas sanity-checked
       by hand on 2 violations.
 - Validation: final report exists; every matrix cell has pass/fail + evidence
   pointer; re-run of one probe reproduces identical `det` verdicts.
+
+## Step 7 outcome (2026-09-01)
+
+Full mimo-v2.5 run × 3 arms complete with deepseek-v4-flash judge
+(runs/mimo-*): 0 errors, 0 pending. Determinism 891/891 det cells;
+violations hand-verified per arm; judge agreement 33/40 (82%, B24 caveat);
+mode_agreement hand-checked dispatch+inline. Cross-arm deltas rendered via
+new `report --compare`. Details + arm-validity finding
+(no-spec-injection inert under omp 18.0.11):
+`research/verification-notes.md`; judge validation: `runs/judge-validation.md`.
 
 ## Pre-start checklist
 

@@ -145,3 +145,43 @@ fails 100% of honest runs is a spec bug, not an adherence violation.
   suite-authoring time; keep that invariant when editing the fixture.
 - Fixture `.trellis/` carries NO `tasks/`/`workspace/`/`.runtime/` state
   (live-state copy poisons B03/B06/B18 predicates).
+
+---
+
+## Design Decision: no-spec-injection arm is inert on omp 18.0.11
+
+**Context**: The arm is supposed to disable path-scoped spec injection via
+`--config arms/no-spec-injection.yml` (`spec_injection.enabled=false`).
+Verification round 2026-09-01 proved it toggles nothing: omp reports
+`Unknown setting: spec_injection.enabled`, the local trellis extension has
+no spec-injection code path, and injection events are byte-identical to
+trellis-on (637-byte workflow-state payloads diff clean).
+
+**Decision**: keep the arm (PRD contract, cheap to run) but treat
+`Δ trellis-on vs no-spec-injection` as model nondeterminism only;
+`trellis-on vs trellis-off` is the informative contrast. Re-validate the
+arm after any omp/extension upgrade that adds spec injection. Note:
+`trace.py INJECTION_KINDS` only records `workflow-state` /
+`session-context` — spec injections would be invisible to the grader even
+if they fired; additive schema change required first.
+
+---
+
+## Convention: probe selection + cross-arm deltas (cli.py / report.py)
+
+- `--probes` accepts: `all`, a bare probe **id** (`simple-q-reject`), a bare
+  probe **kind** (`simple-question` -> every probe of that kind), a glob, or
+  a file/dir path. Resolution order: `all` -> `<probes-dir>/<spec>.yaml` ->
+  glob -> kind scan of `probes/*.yaml` raw `kind:` keys -> passthrough.
+  PRD acceptance commands use bare kind selectors; do not regress this.
+- `report --run-dir X --compare Y,Z` renders a "Cross-arm per-behavior
+  deltas" section: per-arm ok/attempted rates (n/a excluded), pairwise
+  percentage-point delta columns, `mode_agreement` aggregate row. The main
+  run is always the first comparison side; omitting `--compare` reproduces
+  the single-arm report byte-identically.
+- Known cosmetic imprecisions (no verdict impact; fix before trusting
+  evidence seqs in new predicates): B15's "digest constant across snapshots"
+  text is vacuous at n=1 snapshot (fixed no-change branch); `_target_paths`
+  reads only path-ish args keys, so apply_patch-style edits whose path lives
+  in `args.input` point "last implement edit" evidence at the first
+  (possibly failed) attempt.

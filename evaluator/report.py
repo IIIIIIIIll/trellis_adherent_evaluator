@@ -18,6 +18,7 @@ Cell states: ``ok`` (passed), ``FAIL`` (failed; evidence seqs appended),
 from __future__ import annotations
 
 import json
+import itertools
 import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
@@ -312,6 +313,88 @@ def _rates_section(rows: list[ProbeRun]) -> list[str]:
     return lines
 
 
+def _behavior_rates(rows: list[ProbeRun]) -> dict[str, tuple[int, int]]:
+    """behavior_id -> (ok, attempted) with mode_agreement excluded."""
+    cells_per_row = [_row_cells(r) for r in rows]
+    ids = sorted({b for cells in cells_per_row for b in cells if b != _MODE_ID})
+    out: dict[str, tuple[int, int]] = {}
+    for b in ids:
+        states = [cells[b].state for cells in cells_per_row if b in cells]
+        attempted = states.count(_STATE_OK) + states.count(_STATE_FAIL)
+        out[b] = (states.count(_STATE_OK), attempted)
+    return out
+
+
+def _mode_aggregate(rows: list[ProbeRun]) -> tuple[int, int] | None:
+    """(agreed, scored) mode_agreement aggregate, or None if unscoreable."""
+    scored = agreed = 0
+    for row in rows:
+        cell = _row_cells(row).get(_MODE_ID)
+        if cell is None or cell.passed is None:
+            continue
+        _, expected = _parse_mode_notes(cell.notes)
+        if expected in (None, "", "n/a") and row.expected_mode in (None, "", "n/a"):
+            continue
+        scored += 1
+        agreed += 1 if cell.passed else 0
+    return (agreed, scored) if scored else None
+
+
+def _deltas_section(
+    comparisons: Sequence[tuple[str, list[ProbeRun]]],
+) -> list[str]:
+    """Cross-arm per-behavior deltas (PRD acceptance: report highlights
+    per-behavior deltas between arms). Rates are per-arm ok/attempted;
+    delta columns cover every arm pair, in percentage points."""
+    if len(comparisons) < 2:
+        return []
+    rates = {label: _behavior_rates(rows) for label, rows in comparisons}
+    ids = sorted({b for r in rates.values() for b in r})
+    pairs = list(itertools.combinations(range(len(comparisons)), 2))
+
+    def _fmt(ok: int, attempted: int) -> str:
+        return f"{ok}/{attempted} ({100 * ok / attempted:.0f}%)" if attempted else "--"
+
+    def _delta(a: tuple[int, int] | None, b: tuple[int, int] | None) -> str:
+        if not a or not b or not a[1] or not b[1]:
+            return "--"
+        pp = round(100 * a[0] / a[1] - 100 * b[0] / b[1])
+        return f"{pp:+d}pp"
+
+    lines = [
+        "## Cross-arm per-behavior deltas",
+        "",
+        "Per-arm ok/attempted (n/a excluded from denominators); "
+        "Δ columns give percentage-point rate differences between arm pairs "
+        "(-- when either side has no attempted verdicts).",
+        "",
+    ]
+    header = (
+        "| behavior | "
+        + " | ".join(label for label, _ in comparisons)
+        + " | "
+        + " | ".join(f"Δ {comparisons[i][0]} vs {comparisons[j][0]}" for i, j in pairs)
+        + " |"
+    )
+    lines.append(header)
+    lines.append("|" + "---|" * (1 + len(comparisons) + len(pairs)))
+    for b in ids:
+        cells = [_fmt(*rates[label].get(b, (0, 0))) for label, _ in comparisons]
+        deltas = [
+            _delta(rates[comparisons[i][0]].get(b), rates[comparisons[j][0]].get(b))
+            for i, j in pairs
+        ]
+        lines.append("| " + b + " | " + " | ".join(cells + deltas) + " |")
+    aggs = {label: _mode_aggregate(rows) for label, rows in comparisons}
+    mode_cells = [_fmt(*agg) if agg else "--" for agg in (aggs[l] for l, _ in comparisons)]
+    mode_deltas = [
+        _delta(aggs[comparisons[i][0]], aggs[comparisons[j][0]]) for i, j in pairs
+    ]
+    lines.append("| " + _MODE_ID + " | " + " | ".join(mode_cells + mode_deltas) + " |")
+    lines.append("")
+    return lines
+
+
 def _parse_mode_notes(notes: str) -> tuple[str, str | None]:
     m = re.search(r"observed=(\S+)", notes or "")
     observed = m.group(1).rstrip(";,") if m else ""
@@ -333,13 +416,11 @@ def _mode_section(rows: list[ProbeRun]) -> list[str]:
         lines.append(
             f"| {row.probe_id} | {expected or 'n/a'} | {observed or '?'} | {cell.state} |"
         )
-        if expected not in (None, "", "n/a") and cell.passed is not None:
-            scored += 1
-            agreed += 1 if cell.passed else 0
     lines.append("")
-    if scored:
+    agg = _mode_aggregate(rows)
+    if agg:
         lines.append(
-            f"aggregate mode_agreement: {agreed}/{scored} ({100 * agreed / scored:.0f}%)"
+            f"aggregate mode_agreement: {agg[0]}/{agg[1]} ({100 * agg[0] / agg[1]:.0f}%)"
         )
     else:
         lines.append("aggregate mode_agreement: no scoreable probes (all n/a)")
@@ -466,6 +547,7 @@ def render_report(
     date: str,
     run_dir: str = "",
     behavior_text: Mapping[str, str] | None = None,
+    comparisons: Sequence[tuple[str, list[ProbeRun]]] | None = None,
 ) -> str:
     """Render the full markdown report for one arm's run.
 
@@ -482,6 +564,7 @@ def render_report(
     lines.append("")
     lines += _matrix_section(rows, behavior_text)
     lines += _rates_section(rows)
+    lines += _deltas_section(list(comparisons or []))
     lines += _mode_section(rows)
     lines += _overadherence_section(rows)
     lines += _checklist_section(rows)

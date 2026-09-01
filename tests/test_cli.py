@@ -492,3 +492,67 @@ def test_run_probe_wires_objection_lines(tmp_path, patched_pipeline, probe_dir, 
     policies = {p for p, _ in captured}
     assert {"reject_task_creation", "approve_all"} <= policies  # all 3 probes ran
     assert all(lines is None for _, lines in captured)  # none of these carry scripts
+
+
+def test_resolve_probe_paths_bare_id(tmp_path):
+    # bare probe id resolves to its YAML in the default probes dir (PRD AC1)
+    assert cli._resolve_probe_paths("simple-q-reject") == [
+        str(cli.DEFAULT_PROBES_DIR / "simple-q-reject.yaml")
+    ]
+    # unknown bare id passes through untouched (surfaces as load error)
+    assert cli._resolve_probe_paths("no-such-probe") == ["no-such-probe"]
+    # globs and explicit paths keep their existing behavior
+    assert len(cli._resolve_probe_paths(str(cli.DEFAULT_PROBES_DIR / "neg-control-*.yaml"))) == 2
+    assert cli._resolve_probe_paths("all") == [str(cli.DEFAULT_PROBES_DIR)]
+    # bare kind resolves to every probe of that kind (PRD AC1 selector)
+    kind_paths = cli._resolve_probe_paths("simple-question")
+    assert {Path(p).name for p in kind_paths} == {
+        "simple-q-approve.yaml", "simple-q-reject.yaml"
+    }
+
+
+def test_render_report_cross_arm_deltas():
+    def row(b15: bool, mode_ok: bool, with_b20: bool):
+        det = [Verdict("B15", b15, (), ""), Verdict("B18", True, (), "")]
+        if with_b20:
+            det.append(Verdict("B20", False, (8,), ""))
+        det.append(Verdict("mode_agreement", mode_ok, (),
+                           "observed=inline expected=dispatch"))
+        return [
+            report.ProbeRun(
+                probe_id="p1", kind="bugfix", expected_mode="dispatch",
+                events_path="p1/events.jsonl", det_verdicts=tuple(det),
+            )
+        ]
+
+    arm_a = row(True, True, with_b20=False)
+    arm_b = row(False, False, with_b20=True)
+    md = report.render_report(
+        arm_a, run_name="r", arm="trellis-on", model="m", date="d",
+        comparisons=[("trellis-on", arm_a), ("trellis-off", arm_b)],
+    )
+    assert "## Cross-arm per-behavior deltas" in md
+    b15 = [l for l in md.splitlines() if l.startswith("| B15 |")][-1]
+    assert "| 1/1 (100%) | 0/1 (0%) | +100pp |" in b15
+    mode = [l for l in md.splitlines() if l.startswith("| mode_agreement |")][-1]
+    assert "| 1/1 (100%) | 0/1 (0%) | +100pp |" in mode
+    # behavior absent from one arm renders "--" on both rate and delta
+    b20 = [l for l in md.splitlines() if l.startswith("| B20 |")][-1]
+    assert "| -- | 0/1 (0%) | -- |" in b20
+    # mode_agreement excluded from behavior ids, appears once as its own row
+    assert sum(1 for l in md.splitlines() if l.startswith("| mode_agreement |")) == 1
+
+
+def test_report_compare_flag_appends_deltas(tmp_path, patched_pipeline, probe_dir):
+    run_a = _evaluate(tmp_path, probe_dir, run_name="armA")
+    run_b = _evaluate(tmp_path, probe_dir, run_name="armB")
+    before = (run_a / "report.md").read_text()
+    assert "## Cross-arm per-behavior deltas" not in before
+    rc = cli.main(["report", "--run-dir", str(run_a), "--compare", str(run_b)])
+    assert rc == 0
+    md = (run_a / "report.md").read_text()
+    assert "## Cross-arm per-behavior deltas" in md
+    assert "Δ trellis-off vs trellis-off" in md  # arm labels come from run.json
+    # deterministic re-render
+    rc = cli.main(["report", "--run-dir", str(run_a), "--compare", str(run_b)])
+    assert (run_a / "report.md").read_text() == md
