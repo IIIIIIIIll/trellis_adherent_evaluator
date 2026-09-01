@@ -58,3 +58,35 @@ Session summary was not supplied.
 ### Status
 
 [OK] **Completed**
+
+
+## Session 3: Pin B24 no-task boundary, re-validate judge agreement
+
+**Date**: 2026-09-01
+**Task**: Pin B24 no-task boundary, re-validate judge agreement
+**Branch**: `main`
+
+### Summary
+
+Session summary was not supplied.
+
+### Main Changes
+
+- B24 judge rubric pins the zero-artifacts case: no checklist AND no implement.md = vacuous pass (absence scored by B01/B02/B06/B20)
+- Re-validation on same 10 traces: B24 blind agreement 6/10 -> 9/10; residual 1/10 = judge leniency on improvised-but-true-to-work checklists
+- Measured judge run-to-run stability: B17 0/10 flips, B14 1/10, B01 2/10 (borderline small-bugfix classification on trellis-off traces)
+- Stored runs/mimo-* B24 verdicts are pre-pinning vintage; fresh runs use the new boundary
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `a533cfa` | (see git log) |
+
+### Testing
+
+- [OK] python3 -m pytest tests -q -> 159 passed
+
+### Status
+
+[OK] **Completed**

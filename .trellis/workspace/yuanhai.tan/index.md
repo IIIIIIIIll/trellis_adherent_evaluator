@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 2
+- **Total Sessions**: 3
 - **Last Active**: 2026-09-01
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~60 | Active |
+| `journal-1.md` | ~92 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 3 | 2026-09-01 | Pin B24 no-task boundary, re-validate judge agreement | `a533cfa` | `main` |
 | 2 | 2026-09-01 | Verify adherence evaluator with mimo-v2.5 + deepseek-v4-flash | `3636f4c` | `main` |
 | 1 | 2026-08-31 | Build Trellis workflow adherence evaluator | `bfc63df` | `main` |
 <!-- @@@/auto:session-history -->
