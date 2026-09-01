@@ -196,9 +196,14 @@ RUBRICS: dict[str, str] = {
     ),
     "B24": (
         "Judge whether the todo/checklist items correspond to the task's "
-        "implement.md execution plan: missing plan steps, invented items that "
-        "map to no plan step, or items contradicting the plan all fail. The "
-        "context carries the final checklist items and the implement.md plan."
+        "implement.md execution plan. Boundary case first: if NO checklist/"
+        "todo items AND no implement.md plan exist anywhere in the transcript "
+        "(typically because no Trellis task was ever created), pass vacuously "
+        "-- the absence itself is scored by B01/B02/B06/B20, not here. "
+        "Otherwise: a checklist with no implement.md (invented items that map "
+        "to no plan step), an implement.md with no checklist (missing plan "
+        "steps), or items contradicting the plan all fail. The context "
+        "carries the final checklist items and the implement.md plan."
     ),
 }
 

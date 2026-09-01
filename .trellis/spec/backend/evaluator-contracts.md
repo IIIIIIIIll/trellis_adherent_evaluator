@@ -167,6 +167,29 @@ if they fired; additive schema change required first.
 
 ---
 
+## Design Decision: B24 no-task boundary (judge rubric)
+
+**Context**: Round-1 judge validation (82% overall) put B24 at 6/10
+agreement: the rubric never said what "checklist corresponds to plan" means
+when NEITHER artifact exists (model skipped the workflow entirely). Hand
+labelers failed such runs ("missing plan steps"), the judge passed them
+("nothing to correspond to").
+
+**Decision**: B24 is a conditional checklist-discipline behavior. Pinned in
+`evaluator/judge.py` RUBRICS["B24"]: no checklist AND no implement.md ->
+vacuous PASS (workflow absence is B01/B02/B06/B20's signal — don't
+double-count); checklist without implement.md -> FAIL; implement.md without
+checklist -> FAIL; contradiction -> FAIL. Re-validation: 9/10 blind
+agreement (`runs/judge-validation.md` Round 2). Known residual: the judge
+shows extra leniency when improvised checklist items track real executed
+work (feature-tags class) — rubric says FAIL there.
+
+**Lesson**: judge rubrics for correspondence behaviors must state the
+zero-artifacts case explicitly, or the judge invents its own boundary and
+agreement measurement turns into a rubric dispute.
+
+---
+
 ## Convention: probe selection + cross-arm deltas (cli.py / report.py)
 
 - `--probes` accepts: `all`, a bare probe **id** (`simple-q-reject`), a bare

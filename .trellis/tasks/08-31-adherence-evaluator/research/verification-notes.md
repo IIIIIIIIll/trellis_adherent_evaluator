@@ -36,6 +36,13 @@ verdicts anywhere (judge never failed to parse).
   rubric is ambiguous on no-task runs (hand "missing plan steps -> fail" vs
   judge "nothing to correspond to -> ok"); B24 rates should be read with
   that caveat. Follow-up: pin the no-task case in the rubric.
+  -> **Follow-up done (same day)**: B24 rubric pinned in `judge.py`
+  (vacuous PASS when neither checklist nor implement.md exists); blind
+  re-label vs fresh judge calls: **B24 9/10**. Judge run-to-run stability
+  measured on the same sample: B17 0/10 flips, B14 1/10, B01 2/10
+  (borderline small-bugfix classification). Stored mimo-* B24 verdicts are
+  pre-pinning; fresh runs use the new boundary. Details:
+  `runs/judge-validation.md` Round 2.
 - **AC6 violation hand-verification**: one det violation per arm confirmed
   against stored traces (trellis-on bugfix-tz B15; trellis-off bugfix-tz B15
   corroborated live: sandbox git log digest == snapshot digest, working tree
